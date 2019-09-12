@@ -1,0 +1,24 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    run: postgres-deployment
+  name: postgres-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      run: postgres-deployment
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        run: postgres-deployment
+    spec:
+      containers:
+      - image: postgres
+        name: postgres-deployment
+        resources: {}
+status: {}

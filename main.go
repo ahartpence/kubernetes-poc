@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 
+	"github.com/ghodss/yaml"
 	"github.com/jhunt/go-ansi"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -24,82 +26,34 @@ func main() {
 		bailWith("Failed creating client set: %s", err)
 	}
 
-	//nodeList, err := k8sClient.CoreV1().Pods("ahartpence").List(metav1.ListOptions{})
-	//if err != nil {
-	//	bailWith("Failed to list nodes: %s", err)
-	//}
+	//get the deployment file, unmarshal it into `deployment`, and then create it
+	bytes, err := ioutil.ReadFile("deployment.yml")
+	if err != nil {
+		bailWith("Failed to read deployment from file: %s", err)
+	}
 
-	//fmt.Println(nodeList.String())
-	//create a deployment, postgres-deployment, with 2 replicas
+	var deployment appsv1.Deployment
+	err = yaml.Unmarshal(bytes, &deployment)
+	if err != nil {
+		bailWith("Failed to parse yaml: %s", err)
+	}
 
 	username := "tom"
 	password := "andrew"
-	secret, err := createSecret(k8sClient, username, password)
+	_, err = createSecret(k8sClient, username, password)
 	if err != nil {
 		bailWith("Failed when creating secret: %s", err)
 	}
 
-	deploymentInterface := k8sClient.AppsV1().Deployments("ahartpence")
-	deploymentSpec := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "postgres-deployment",
-			Labels: map[string]string{
-				"app": "postgres",
-			},
-		},
-		Spec: appsv1.DeploymentSpec{
-			Replicas: int32Ptr(2),
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"app": "postgres",
-				},
-			},
-			Template: apiv1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"app": "postgres",
-					},
-				},
-				Spec: apiv1.PodSpec{
-					Containers: []apiv1.Container{
-						{
-							Name:  "postgres",
-							Image: "postgres",
-							Env: []apiv1.EnvVar{
-								{
-									Name: "POSTGRES_USER",
-									ValueFrom: &apiv1.EnvVarSource{
-										SecretKeyRef: &apiv1.SecretKeySelector{
-											LocalObjectReference: apiv1.LocalObjectReference{
-												Name: secret.Name,
-											},
-											Key: "username",
-										},
-									},
-								},
-								{
-									Name: "POSTGRES_PASSWORD",
-									ValueFrom: &apiv1.EnvVarSource{
-										SecretKeyRef: &apiv1.SecretKeySelector{
-											LocalObjectReference: apiv1.LocalObjectReference{
-												Name: secret.Name,
-											},
-											Key: "password",
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
+	fmt.Println("Created Secret")
 
-	_, err = deploymentInterface.Create(deploymentSpec)
+	deploymentInterface := k8sClient.AppsV1().Deployments("ahartpence")
+	_, err = deploymentInterface.Create(&deployment)
 	if err != nil {
 		bailWith("Failed to deploy postgres node: %s", err)
 	}
+
+	fmt.Println("Created deployment")
 
 	//create and expose a service, postgres-service, with type NodePort and port 5432
 	serviceInterface := k8sClient.CoreV1().Services("ahartpence")
@@ -129,6 +83,8 @@ func main() {
 	if err != nil {
 		bailWith("Failed to create service: %s", err)
 	}
+
+	fmt.Println("Created Service")
 
 }
 
