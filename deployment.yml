@@ -4,7 +4,6 @@ metadata:
   creationTimestamp: null
   labels:
     run: postgres-deployment
-  name: postgres-deployment
 spec:
   replicas: 3
   selector:

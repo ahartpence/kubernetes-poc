@@ -10,7 +10,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -27,16 +26,28 @@ func main() {
 	}
 
 	//get the deployment file, unmarshal it into `deployment`, and then create it
-	bytes, err := ioutil.ReadFile("deployment.yml")
+	deploymentFile, err := ioutil.ReadFile("deployment.yml")
 	if err != nil {
 		bailWith("Failed to read deployment from file: %s", err)
 	}
 
 	var deployment appsv1.Deployment
-	err = yaml.Unmarshal(bytes, &deployment)
+	err = yaml.Unmarshal(deploymentFile, &deployment)
 	if err != nil {
 		bailWith("Failed to parse yaml: %s", err)
 	}
+
+	fmt.Print(&deployment)
+
+	deployment.ObjectMeta.GenerateName = "poc-"
+
+	deploymentInterface := k8sClient.AppsV1().Deployments("ahartpence")
+	_, err = deploymentInterface.Create(&deployment)
+	if err != nil {
+		bailWith("Failed to deploy postgres: %s", err)
+	}
+
+	fmt.Println("Created deployment")
 
 	username := "tom"
 	password := "andrew"
@@ -47,39 +58,19 @@ func main() {
 
 	fmt.Println("Created Secret")
 
-	deploymentInterface := k8sClient.AppsV1().Deployments("ahartpence")
-	_, err = deploymentInterface.Create(&deployment)
+	//create the service based on a file, "service.yml"
+	serviceFile, err := ioutil.ReadFile("service.yml")
 	if err != nil {
-		bailWith("Failed to deploy postgres node: %s", err)
+		bailWith("Failed to read service file: %s", err)
 	}
-
-	fmt.Println("Created deployment")
-
-	//create and expose a service, postgres-service, with type NodePort and port 5432
+	var service apiv1.Service
+	err = yaml.Unmarshal(serviceFile, &service)
+	if err != nil {
+		bailWith("Failed to parse service yaml %s", err)
+	}
 	serviceInterface := k8sClient.CoreV1().Services("ahartpence")
-	serviceSpec := &apiv1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "postgres-service",
-			Labels: map[string]string{
-				"app": "postgres",
-			},
-		},
-		Spec: apiv1.ServiceSpec{
-			Ports: []apiv1.ServicePort{
-				{
-					Name:       "postgres-service",
-					Port:       5432,
-					TargetPort: intstr.FromInt(5432),
-				},
-			},
-			Selector: map[string]string{
-				"app": "postgres",
-			},
-			Type: apiv1.ServiceTypeNodePort,
-		},
-	}
 
-	_, err = serviceInterface.Create(serviceSpec)
+	_, err = serviceInterface.Create(&service)
 	if err != nil {
 		bailWith("Failed to create service: %s", err)
 	}
