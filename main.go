@@ -39,7 +39,10 @@ func main() {
 
 	fmt.Print(&deployment)
 
-	deployment.ObjectMeta.GenerateName = "poc-"
+	//get the current deployment name, set it to nil then generate a new name based on what was already present in the file
+	deploymentName := deployment.ObjectMeta.Name
+	deployment.ObjectMeta.Name = ""
+	deployment.ObjectMeta.GenerateName = deploymentName + "-"
 
 	deploymentInterface := k8sClient.AppsV1().Deployments("ahartpence")
 	_, err = deploymentInterface.Create(&deployment)
