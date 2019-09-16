@@ -31,7 +31,7 @@ func main() {
 		bailWith("Failed when creating secret: %s", err)
 	}
 
-	fmt.Print("Secret created")
+	fmt.Println("Secret created")
 
 	//create the deployment from the file deployment.yml
 	_, err = createDeployment(k8sClient, "deployment.yml")
@@ -39,21 +39,11 @@ func main() {
 		bailWith("Failed to create deployment: %s", err)
 	}
 
-	fmt.Print("deployment created")
+	fmt.Println("deployment created")
 
 	//create the service based on a file, "service.yml"
-	serviceFile, err := ioutil.ReadFile("service.yml")
-	if err != nil {
-		bailWith("Failed to read service file: %s", err)
-	}
-	var service apiv1.Service
-	err = yaml.Unmarshal(serviceFile, &service)
-	if err != nil {
-		bailWith("Failed to parse service yaml %s", err)
-	}
-	serviceInterface := k8sClient.CoreV1().Services("ahartpence")
 
-	_, err = serviceInterface.Create(&service)
+	_, err = createService(k8sClient, "service.yml")
 	if err != nil {
 		bailWith("Failed to create service: %s", err)
 	}
@@ -69,7 +59,6 @@ func main() {
 	}
 
 	fmt.Print(files)
-
 }
 
 func bailWith(format string, args ...interface{}) {
@@ -104,6 +93,21 @@ func createDeployment(client *kubernetes.Clientset, fileName string) (*appsv1.De
 
 }
 
+func createService(client *kubernetes.Clientset, fileName string) (*apiv1.Service, error) {
+	serviceInterface := client.CoreV1().Services("ahartpence")
+	serviceFile, err := ioutil.ReadFile("service.yml")
+	if err != nil {
+		bailWith("Failed to read service file: %s", err)
+	}
+	var service apiv1.Service
+	err = yaml.Unmarshal(serviceFile, &service)
+	if err != nil {
+		bailWith("Failed to parse service yaml %s", err)
+	}
+
+	return serviceInterface.Create(&service)
+}
+
 func listDir(directory string, filter *regexp.Regexp) ([]string, error) {
 	var files []string
 	fileInfo, err := ioutil.ReadDir(directory)
@@ -112,7 +116,6 @@ func listDir(directory string, filter *regexp.Regexp) ([]string, error) {
 	}
 
 	for _, file := range fileInfo {
-		fmt.Println(file.Name())
 		if filter.MatchString(file.Name()) {
 			files = append(files, file.Name())
 		}
