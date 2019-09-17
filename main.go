@@ -3,16 +3,21 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"regexp"
 
+	"code.cloudfoundry.org/lager"
 	"github.com/ghodss/yaml"
 	"github.com/jhunt/go-ansi"
+	"github.com/pivotal-cf/brokerapi"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 )
+
+var deploymentName string
 
 func main() {
 	//login to the bufflab k8s cluster
@@ -26,20 +31,20 @@ func main() {
 	}
 
 	//deploy the secret from a yaml file
-	_, err = createSecret(k8sClient, "secret.yml")
-	if err != nil {
-		bailWith("Failed when creating secret: %s", err)
-	}
+	//_, err = createSecret(k8sClient, "secret.yml")
+	//if err != nil {
+	//	bailWith("Failed when creating secret: %s", err)
+	//}
 
-	fmt.Println("Secret created")
+	//fmt.Println("Secret created")
 
 	//create the deployment from the file deployment.yml
-	_, err = createDeployment(k8sClient, "deployment.yml")
-	if err != nil {
-		bailWith("Failed to create deployment: %s", err)
-	}
+	//_, err = createDeployment(k8sClient, "deployment.yml")
+	//if err != nil {
+	//	bailWith("Failed to create deployment: %s", err)
+	//}
 
-	fmt.Println("deployment created")
+	//fmt.Println("deployment created")
 
 	//create the service based on a file, "service.yml"
 
@@ -50,17 +55,25 @@ func main() {
 
 	fmt.Println("Created Service")
 
-	fmt.Println("testing directory for yml files")
-	regex, _ := regexp.Compile("yml")
-
-	files, err := listDir("test", regex)
-	if err != nil {
-		bailWith("Failed to do something with the directory")
+	brokerCredentials := brokerapi.BrokerCredentials{
+		Username: "andrew",
+		Password: "tom",
 	}
 
-	fmt.Print(files)
-}
+	broker := &Broker{
+		KubeClient: *k8sClient,
+	}
 
+	logger := lager.NewLogger("poc")
+
+	handler := brokerapi.New(broker, logger, brokerCredentials)
+
+	err = http.ListenAndServe(":8080", handler)
+	if err != nil {
+		bailWith("Server quit: %s", err)
+	}
+
+}
 func bailWith(format string, args ...interface{}) {
 	ansi.Fprintf(os.Stderr, "@R{"+format+"}\n", args...)
 	os.Exit(1)
@@ -88,6 +101,7 @@ func createDeployment(client *kubernetes.Clientset, fileName string) (*appsv1.De
 
 	var deployment appsv1.Deployment
 	err = yaml.Unmarshal(deploymentFile, &deployment)
+	deployment.ObjectMeta.Name = deploymentName
 
 	return deploymentsInterface.Create(&deployment)
 

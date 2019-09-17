@@ -3,11 +3,20 @@ module github.com/ahartpence/kubernetes-poc
 go 1.12
 
 require (
+	code.cloudfoundry.org/lager v2.0.0+incompatible
+	github.com/cloudfoundry-incubator/candiedyaml v0.0.0-20170901234223-a41693b7b7af // indirect
+	github.com/drewolson/testflight v1.0.0 // indirect
 	github.com/ghodss/yaml v0.0.0-20150909031657-73d445a93680
 	github.com/googleapis/gnostic v0.3.1 // indirect
+	github.com/gorilla/mux v1.7.3 // indirect
 	github.com/imdario/mergo v0.3.7 // indirect
 	github.com/jhunt/go-ansi v0.0.0-20181127194324-5fd839f108b6
 	github.com/mattn/go-isatty v0.0.9 // indirect
+	github.com/pborman/uuid v1.2.0 // indirect
+	github.com/pivotal-cf/brokerapi v6.3.0+incompatible
+	github.com/pivotal-cf/cf-redis-broker v0.0.0-20190903083237-30fbb96f4383
+	github.com/pivotal-golang/lager v2.0.0+incompatible
+	github.com/pkg/errors v0.8.1 // indirect
 	golang.org/x/crypto v0.0.0-20190909091759-094676da4a83 // indirect
 	golang.org/x/net v0.0.0-20190909003024-a7b16738d86b // indirect
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45 // indirect
