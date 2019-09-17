@@ -4,6 +4,7 @@ metadata:
   creationTimestamp: null
   labels:
     run: postgres-deployment
+    created_by: blacksmith
   name: pg-deployment
 spec:
   replicas: 3
