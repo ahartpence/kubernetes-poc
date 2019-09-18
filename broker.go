@@ -65,7 +65,7 @@ func (b *Broker) Provision(context context.Context, instanceID string, details b
 	b.Deployments[details.ServiceID] = append(b.Deployments[details.ServiceID], instanceID)
 
 	for key, value := range b.Deployments {
-		fmt.Println("Key:", key, "Value:", value)
+		fmt.Println("Service:", key, "Instances", value)
 	}
 	return spec, nil
 }
@@ -91,6 +91,13 @@ func (b *Broker) Deprovision(context context.Context, instanceID string, details
 	//	fmt.Println(b.Deployments)
 
 	//	err = deleteSecret(&b.KubeClient, deploymentName)
+
+	b.Fuhgettaboutit(b.Deployments[details.ServiceID], instanceID)
+
+	for key, value := range b.Deployments {
+		fmt.Println("Service:", key, "Instances", value)
+	}
+
 	return brokerapi.DeprovisionServiceSpec{}, nil
 }
 
@@ -129,6 +136,7 @@ func (b *Broker) Fuhgettaboutit(s []string, strToRemove string) []string {
 			i = p
 		}
 	}
-	s[len(s)-1], s[i] = s[i], s[len(s)-1]
+	s[i] = s[len(s)-1]
+	s[len(s)-1] = ""
 	return s[:len(s)-1]
 }
