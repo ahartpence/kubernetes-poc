@@ -34,7 +34,7 @@ func main() {
 		Password: "tom",
 	}
 
-	deploymentMap = make(map[string]map[string]string)
+	deploymentMap := make(map[string][]string)
 
 	broker := &Broker{
 		KubeClient:  *k8sClient,

@@ -11,7 +11,7 @@ import (
 
 type Broker struct {
 	KubeClient  kubernetes.Clientset
-	Deployments map[string]map[string]string
+	Deployments map[string][]string
 }
 
 type InstanceCreator interface {
@@ -33,6 +33,17 @@ func (b *Broker) Services(context context.Context) ([]brokerapi.Service, error) 
 				Description: "c",
 			}},
 		},
+		brokerapi.Service{
+			ID:          "postgres",
+			Name:        "postgres-name",
+			Description: "the best pg instance this side of something",
+			Bindable:    true,
+			Plans: []brokerapi.ServicePlan{{
+				ID:          "plan-one",
+				Name:        "my-pg-plan",
+				Description: "a cool pg",
+			}},
+		},
 	}, nil
 }
 
@@ -51,10 +62,7 @@ func (b *Broker) Provision(context context.Context, instanceID string, details b
 
 	fmt.Println("adding service to deployed list")
 
-	b.Deployments = map[string]string{
-		"service_id":  details.ServiceID,
-		"instance_id": instanceID,
-	}
+	b.Deployments[details.ServiceID] = append(b.Deployments[details.ServiceID], instanceID)
 
 	for key, value := range b.Deployments {
 		fmt.Println("Key:", key, "Value:", value)
