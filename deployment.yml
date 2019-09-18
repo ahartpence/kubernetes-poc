@@ -3,23 +3,23 @@ kind: Deployment
 metadata:
   creationTimestamp: null
   labels:
-    run: postgres-deployment
+    run: redis-deployment
     created_by: blacksmith
-  name: pg-deployment
+  name: redis-deployment
 spec:
   replicas: 3
   selector:
     matchLabels:
-      run: postgres-deployment
+      run: redis-deployment
   strategy: {}
   template:
     metadata:
       creationTimestamp: null
       labels:
-        run: postgres-deployment
+        run: redis-deployment
     spec:
       containers:
-      - image: postgres
-        name: postgres-deployment
+      - image: redis
+        name: redis-deployment
         resources: {}
 status: {}

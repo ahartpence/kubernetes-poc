@@ -10,7 +10,8 @@ import (
 )
 
 type Broker struct {
-	KubeClient kubernetes.Clientset
+	KubeClient  kubernetes.Clientset
+	Deployments map[string]map[string]string
 }
 
 type InstanceCreator interface {
@@ -40,14 +41,48 @@ func (b *Broker) Provision(context context.Context, instanceID string, details b
 
 	fmt.Println("Provisioning new instance: ", details.ServiceID, instanceID)
 
-	deploymentName = details.ServiceID + "-" + instanceID
-	createDeployment(&b.KubeClient, "deployment.yml")
+	deploymentName := details.ServiceID + "-" + instanceID
+	createSecret(&b.KubeClient, "secret.yml", deploymentName)
+	fmt.Println("\t Created Secret")
+	createDeployment(&b.KubeClient, "deployment.yml", deploymentName)
+	fmt.Println("\t Created deployment")
+	createService(&b.KubeClient, "service.yml", deploymentName)
+	fmt.Println("\t Created service")
 
+	fmt.Println("adding service to deployed list")
+
+	b.Deployments = map[string]string{
+		"service_id":  details.ServiceID,
+		"instance_id": instanceID,
+	}
+
+	for key, value := range b.Deployments {
+		fmt.Println("Key:", key, "Value:", value)
+	}
 	return spec, nil
 }
 
-func (b *Broker) Deprovision(context context.Context, instanceID string,
-	details brokerapi.DeprovisionDetails, asyncAllowed bool) (brokerapi.DeprovisionServiceSpec, error) {
+func (b *Broker) Deprovision(context context.Context, instanceID string, details brokerapi.DeprovisionDetails, asyncAllowed bool) (brokerapi.DeprovisionServiceSpec, error) {
+	fmt.Println("Deprovisioning Service :", details.ServiceID)
+
+	deploymentName := details.ServiceID + "-" + instanceID
+
+	fmt.Println(deploymentName)
+	err := deleteDeployment(&b.KubeClient, deploymentName)
+	if err != nil {
+		bailWith("Failed to delete deployment: %s", err)
+	}
+
+	err = deleteService(&b.KubeClient, deploymentName)
+	if err != nil {
+		bailWith("Failed to delete service: %s", err)
+	}
+
+	//b.Deployments = b.Fuhgettaboutit(b.Deployments, instanceID)
+
+	//	fmt.Println(b.Deployments)
+
+	//	err = deleteSecret(&b.KubeClient, deploymentName)
 	return brokerapi.DeprovisionServiceSpec{}, nil
 }
 
@@ -77,4 +112,15 @@ func (b *Broker) GetInstance(context context.Context, instanceID string) (broker
 
 func (b *Broker) LastBindingOperation(ctx context.Context, instanceID, bindingID string, details domain.PollDetails) (domain.LastOperation, error) {
 	return domain.LastOperation{}, nil
+}
+
+func (b *Broker) Fuhgettaboutit(s []string, strToRemove string) []string {
+	var i int
+	for p, w := range s {
+		if w == strToRemove {
+			i = p
+		}
+	}
+	s[len(s)-1], s[i] = s[i], s[len(s)-1]
+	return s[:len(s)-1]
 }

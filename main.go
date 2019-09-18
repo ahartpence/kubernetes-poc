@@ -13,11 +13,10 @@ import (
 	"github.com/pivotal-cf/brokerapi"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 )
-
-var deploymentName string
 
 func main() {
 	//login to the bufflab k8s cluster
@@ -30,38 +29,16 @@ func main() {
 		bailWith("Failed creating client set: %s", err)
 	}
 
-	//deploy the secret from a yaml file
-	//_, err = createSecret(k8sClient, "secret.yml")
-	//if err != nil {
-	//	bailWith("Failed when creating secret: %s", err)
-	//}
-
-	//fmt.Println("Secret created")
-
-	//create the deployment from the file deployment.yml
-	//_, err = createDeployment(k8sClient, "deployment.yml")
-	//if err != nil {
-	//	bailWith("Failed to create deployment: %s", err)
-	//}
-
-	//fmt.Println("deployment created")
-
-	//create the service based on a file, "service.yml"
-
-	_, err = createService(k8sClient, "service.yml")
-	if err != nil {
-		bailWith("Failed to create service: %s", err)
-	}
-
-	fmt.Println("Created Service")
-
 	brokerCredentials := brokerapi.BrokerCredentials{
 		Username: "andrew",
 		Password: "tom",
 	}
 
+	deploymentMap = make(map[string]map[string]string)
+
 	broker := &Broker{
-		KubeClient: *k8sClient,
+		KubeClient:  *k8sClient,
+		Deployments: deploymentMap,
 	}
 
 	logger := lager.NewLogger("poc")
@@ -72,6 +49,7 @@ func main() {
 	if err != nil {
 		bailWith("Server quit: %s", err)
 	}
+	fmt.Println("Ready to create services")
 
 }
 func bailWith(format string, args ...interface{}) {
@@ -79,7 +57,7 @@ func bailWith(format string, args ...interface{}) {
 	os.Exit(1)
 }
 
-func createSecret(client *kubernetes.Clientset, fileName string) (*apiv1.Secret, error) {
+func createSecret(client *kubernetes.Clientset, fileName string, uid string) (*apiv1.Secret, error) {
 	secretsInterface := client.CoreV1().Secrets("ahartpence")
 	secretFile, err := ioutil.ReadFile(fileName)
 	if err != nil {
@@ -89,25 +67,33 @@ func createSecret(client *kubernetes.Clientset, fileName string) (*apiv1.Secret,
 	var secret apiv1.Secret
 	err = yaml.Unmarshal(secretFile, &secret)
 
+	secret.ObjectMeta.Name = uid
+	secret.ObjectMeta.Labels = map[string]string{
+		"service": uid,
+	}
+
 	return secretsInterface.Create(&secret)
 }
 
-func createDeployment(client *kubernetes.Clientset, fileName string) (*appsv1.Deployment, error) {
+func createDeployment(client *kubernetes.Clientset, fileName string, uid string) (*appsv1.Deployment, error) {
 	deploymentsInterface := client.AppsV1().Deployments("ahartpence")
 	deploymentFile, err := ioutil.ReadFile(fileName)
 	if err != nil {
 		bailWith("Failed to read deployment file: %s", err)
 	}
-
 	var deployment appsv1.Deployment
 	err = yaml.Unmarshal(deploymentFile, &deployment)
-	deployment.ObjectMeta.Name = deploymentName
+
+	deployment.ObjectMeta.Name = uid
+	deployment.ObjectMeta.Labels = map[string]string{
+		"service": uid,
+	}
 
 	return deploymentsInterface.Create(&deployment)
 
 }
 
-func createService(client *kubernetes.Clientset, fileName string) (*apiv1.Service, error) {
+func createService(client *kubernetes.Clientset, fileName string, uid string) (*apiv1.Service, error) {
 	serviceInterface := client.CoreV1().Services("ahartpence")
 	serviceFile, err := ioutil.ReadFile("service.yml")
 	if err != nil {
@@ -119,7 +105,63 @@ func createService(client *kubernetes.Clientset, fileName string) (*apiv1.Servic
 		bailWith("Failed to parse service yaml %s", err)
 	}
 
+	service.ObjectMeta.Name = uid
+	service.ObjectMeta.Labels = map[string]string{
+		"service": uid,
+	}
+
 	return serviceInterface.Create(&service)
+}
+
+func deleteDeployment(client *kubernetes.Clientset, uid string) error {
+	deploymentsInterface := client.AppsV1().Deployments("ahartpence")
+
+	deletePolicy := metav1.DeletePropagationForeground
+	deleteOptions := &metav1.DeleteOptions{
+		PropagationPolicy: &deletePolicy,
+	}
+
+	listOptions := &metav1.ListOptions{
+		LabelSelector: uid,
+	}
+
+	fmt.Println(listOptions, uid)
+
+	return deploymentsInterface.Delete(uid, deleteOptions)
+}
+
+func deleteService(client *kubernetes.Clientset, uid string) error {
+	serviceInterface := client.CoreV1().Services("ahartpence")
+
+	deletePolicy := metav1.DeletePropagationForeground
+	deleteOptions := &metav1.DeleteOptions{
+		PropagationPolicy: &deletePolicy,
+	}
+
+	listOptions := &metav1.ListOptions{
+		LabelSelector: uid,
+	}
+
+	fmt.Println(listOptions)
+
+	return serviceInterface.Delete(uid, deleteOptions)
+}
+
+func deleteSecret(client *kubernetes.Clientset, uid string) error {
+	secretsInterface := client.CoreV1().Secrets("ahartpence")
+
+	deletePolicy := metav1.DeletePropagationForeground
+	deleteOptions := &metav1.DeleteOptions{
+		PropagationPolicy: &deletePolicy,
+	}
+
+	listOptions := &metav1.ListOptions{
+		LabelSelector: uid,
+	}
+
+	fmt.Println(listOptions)
+
+	return secretsInterface.Delete(uid, deleteOptions)
 }
 
 func listDir(directory string, filter *regexp.Regexp) ([]string, error) {
