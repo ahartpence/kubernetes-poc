@@ -14,12 +14,6 @@ type Broker struct {
 	Deployments map[string][]string
 }
 
-type InstanceCreator interface {
-	Create(instanceID string) error
-	Destroy(instanceID string) error
-	InstanceExists(instanceID string) (bool, error)
-}
-
 func (b *Broker) Services(context context.Context) ([]brokerapi.Service, error) {
 	return []brokerapi.Service{
 		brokerapi.Service{
@@ -64,9 +58,7 @@ func (b *Broker) Provision(context context.Context, instanceID string, details b
 
 	b.Deployments[details.ServiceID] = append(b.Deployments[details.ServiceID], instanceID)
 
-	for key, value := range b.Deployments {
-		fmt.Println("Service:", key, "Instances", value)
-	}
+	b.GetServices(b.Deployments)
 	return spec, nil
 }
 
@@ -86,17 +78,11 @@ func (b *Broker) Deprovision(context context.Context, instanceID string, details
 		bailWith("Failed to delete service: %s", err)
 	}
 
-	//b.Deployments = b.Fuhgettaboutit(b.Deployments, instanceID)
-
-	//	fmt.Println(b.Deployments)
-
-	//	err = deleteSecret(&b.KubeClient, deploymentName)
+	err = deleteSecret(&b.KubeClient, deploymentName)
 
 	b.Fuhgettaboutit(b.Deployments[details.ServiceID], instanceID)
 
-	for key, value := range b.Deployments {
-		fmt.Println("Service:", key, "Instances", value)
-	}
+	b.GetServices(b.Deployments)
 
 	return brokerapi.DeprovisionServiceSpec{}, nil
 }
@@ -139,4 +125,12 @@ func (b *Broker) Fuhgettaboutit(s []string, strToRemove string) []string {
 	s[i] = s[len(s)-1]
 	s[len(s)-1] = ""
 	return s[:len(s)-1]
+}
+
+func (b *Broker) GetServices(services map[string][]string) error {
+	for key, value := range services {
+		fmt.Println("Service:", key, "Instances", value)
+	}
+
+	return nil
 }

@@ -36,13 +36,12 @@ func main() {
 
 	deploymentMap := make(map[string][]string)
 
+	logger := lager.NewLogger("poc")
+
 	broker := &Broker{
 		KubeClient:  *k8sClient,
 		Deployments: deploymentMap,
 	}
-
-	logger := lager.NewLogger("poc")
-
 	handler := brokerapi.New(broker, logger, brokerCredentials)
 
 	err = http.ListenAndServe(":8080", handler)
