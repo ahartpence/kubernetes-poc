@@ -3,11 +3,9 @@ kind: Deployment
 metadata:
   creationTimestamp: null
   labels:
-    run: redis-deployment
-    created_by: blacksmith
   name: redis-deployment
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
       run: redis-deployment
@@ -21,5 +19,11 @@ spec:
       containers:
       - image: redis
         name: redis-deployment
+        env:
+        - name: "POSTGERS_USER"
+          valueFrom:
+            secretKeyRef:
+              name: "test"
+              key: username
         resources: {}
 status: {}

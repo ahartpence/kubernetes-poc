@@ -17,6 +17,7 @@ require (
 	github.com/pivotal-cf/cf-redis-broker v0.0.0-20190903083237-30fbb96f4383
 	github.com/pivotal-golang/lager v2.0.0+incompatible
 	github.com/pkg/errors v0.8.1 // indirect
+	github.com/sethvargo/go-password v0.1.2
 	golang.org/x/crypto v0.0.0-20190909091759-094676da4a83 // indirect
 	golang.org/x/net v0.0.0-20190909003024-a7b16738d86b // indirect
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45 // indirect

@@ -16,6 +16,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
+
+	"github.com/sethvargo/go-password/password"
 )
 
 func main() {
@@ -68,13 +70,26 @@ func createSecret(client *kubernetes.Clientset, fileName string, uid string) (*a
 
 	secret.ObjectMeta.Name = uid
 	secret.ObjectMeta.Labels = map[string]string{
-		"service": uid,
+		"created_by": "blacksmith",
+		"service":    uid,
+	}
+
+	b64Password, err := password.Generate(10, 2, 0, true, true)
+	if err != nil {
+		bailWith("Failed to generate password: %s", err)
+	}
+	secret.Data["password"] = []byte(b64Password)
+
+	for key, secret := range secret.Data {
+		secret := string([]byte(secret))
+		fmt.Print("Key: ", key+"\t")
+		fmt.Print("Secret: ", secret+"\n")
 	}
 
 	return secretsInterface.Create(&secret)
 }
 
-func createDeployment(client *kubernetes.Clientset, fileName string, uid string) (*appsv1.Deployment, error) {
+func createDeployment(client *kubernetes.Clientset, fileName string, uid string, deployKind string) (*appsv1.Deployment, error) {
 	deploymentsInterface := client.AppsV1().Deployments("ahartpence")
 	deploymentFile, err := ioutil.ReadFile(fileName)
 	if err != nil {
@@ -88,11 +103,47 @@ func createDeployment(client *kubernetes.Clientset, fileName string, uid string)
 		"service": uid,
 	}
 
+	deployment.Spec.Selector.MatchLabels = map[string]string{
+		"service": uid,
+	}
+
+	deployment.Spec.Template.ObjectMeta.Labels = map[string]string{
+		"service": uid,
+	}
+
+	deployment.Spec.Template.Spec.Containers = []apiv1.Container{{
+		Name:  uid,
+		Image: deployKind,
+		Env: []apiv1.EnvVar{{
+			Name: "POSTGRES_USER",
+			ValueFrom: &apiv1.EnvVarSource{
+				SecretKeyRef: &apiv1.SecretKeySelector{
+					LocalObjectReference: apiv1.LocalObjectReference{
+						Name: uid,
+					},
+					Key: "username",
+				},
+			},
+		},
+			{
+				Name: "POSTGRES_PASSWORD",
+				ValueFrom: &apiv1.EnvVarSource{
+					SecretKeyRef: &apiv1.SecretKeySelector{
+						LocalObjectReference: apiv1.LocalObjectReference{
+							Name: uid,
+						},
+						Key: "password",
+					},
+				},
+			},
+		},
+	}}
+
 	return deploymentsInterface.Create(&deployment)
 
 }
 
-func createService(client *kubernetes.Clientset, fileName string, uid string) (*apiv1.Service, error) {
+func createService(client *kubernetes.Clientset, fileName string, uid string, deployKind string) (*apiv1.Service, error) {
 	serviceInterface := client.CoreV1().Services("ahartpence")
 	serviceFile, err := ioutil.ReadFile("service.yml")
 	if err != nil {
@@ -104,9 +155,14 @@ func createService(client *kubernetes.Clientset, fileName string, uid string) (*
 		bailWith("Failed to parse service yaml %s", err)
 	}
 
+	service.Spec.Selector = map[string]string{
+		"service": uid,
+	}
+
 	service.ObjectMeta.Name = uid
 	service.ObjectMeta.Labels = map[string]string{
-		"service": uid,
+		"created_by": "blacksmith",
+		"service":    uid,
 	}
 
 	return serviceInterface.Create(&service)

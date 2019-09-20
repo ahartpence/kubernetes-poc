@@ -47,24 +47,41 @@ func (b *Broker) Provision(context context.Context, instanceID string, details b
 	fmt.Println("Provisioning new instance: ", details.ServiceID, instanceID)
 
 	deploymentName := details.ServiceID + "-" + instanceID
-	createSecret(&b.KubeClient, "secret.yml", deploymentName)
+	secret, err := createSecret(&b.KubeClient, "secret.yml", deploymentName)
+	if err != nil {
+		bailWith("Failed to create secret: %s", err)
+	}
+
 	fmt.Println("\t Created Secret")
-	createDeployment(&b.KubeClient, "deployment.yml", deploymentName)
+	_, err = createDeployment(&b.KubeClient, "deployment.yml", deploymentName, details.ServiceID)
+	if err != nil {
+		bailWith("Failed to create deployment: %s", err)
+	}
 	fmt.Println("\t Created deployment")
-	createService(&b.KubeClient, "service.yml", deploymentName)
+	service, err := createService(&b.KubeClient, "service.yml", deploymentName, details.ServiceID)
+	if err != nil {
+		bailWith("failed to create service: %s", err)
+	}
 	fmt.Println("\t Created service")
 
-	fmt.Println("adding service to deployed list")
-
 	b.Deployments[details.ServiceID] = append(b.Deployments[details.ServiceID], instanceID)
-
 	b.GetServices(b.Deployments)
+	secretMap := make(map[string]string)
+	ip := service.Spec.ClusterIP
+	for key, secret := range secret.Data {
+		secret := string([]byte(secret))
+		fmt.Print("Key: ", key+"\t")
+		fmt.Print("Secret: ", secret+"\n")
+		secretMap[key] = secret
+	}
+
+	fmt.Print(fmt.Sprintf("Service sucessfully created, connect to your new instance at %s using the credentials Username: %s\t Password: %s", ip, secretMap["username"], secretMap["password"]))
+
 	return spec, nil
 }
 
 func (b *Broker) Deprovision(context context.Context, instanceID string, details brokerapi.DeprovisionDetails, asyncAllowed bool) (brokerapi.DeprovisionServiceSpec, error) {
 	fmt.Println("Deprovisioning Service :", details.ServiceID)
-
 	deploymentName := details.ServiceID + "-" + instanceID
 
 	fmt.Println(deploymentName)
