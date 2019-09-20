@@ -18,24 +18,24 @@ func (b *Broker) Services(context context.Context) ([]brokerapi.Service, error) 
 	return []brokerapi.Service{
 		brokerapi.Service{
 			ID:          "redis",
-			Name:        "redis-one",
-			Description: "number one redis",
+			Name:        "redis",
+			Description: "a proof of concept redis",
 			Bindable:    true,
 			Plans: []brokerapi.ServicePlan{{
-				ID:          "a",
-				Name:        "b",
-				Description: "c",
+				ID:          "redis-poc",
+				Name:        "postgres",
+				Description: "poc",
 			}},
 		},
 		brokerapi.Service{
 			ID:          "postgres",
-			Name:        "postgres-name",
-			Description: "the best pg instance this side of something",
+			Name:        "postgres",
+			Description: "a proof of concept postgresql instance",
 			Bindable:    true,
 			Plans: []brokerapi.ServicePlan{{
-				ID:          "plan-one",
-				Name:        "my-pg-plan",
-				Description: "a cool pg",
+				ID:          "postgres-poc",
+				Name:        "postgres",
+				Description: "poc",
 			}},
 		},
 	}, nil
@@ -58,7 +58,7 @@ func (b *Broker) Provision(context context.Context, instanceID string, details b
 		bailWith("Failed to create deployment: %s", err)
 	}
 	fmt.Println("\t Created deployment")
-	service, err := createService(&b.KubeClient, "service.yml", deploymentName, details.ServiceID)
+	_, err = createService(&b.KubeClient, "service.yml", deploymentName, details.ServiceID)
 	if err != nil {
 		bailWith("failed to create service: %s", err)
 	}
@@ -67,15 +67,12 @@ func (b *Broker) Provision(context context.Context, instanceID string, details b
 	b.Deployments[details.ServiceID] = append(b.Deployments[details.ServiceID], instanceID)
 	b.GetServices(b.Deployments)
 	secretMap := make(map[string]string)
-	ip := service.Spec.ClusterIP
 	for key, secret := range secret.Data {
 		secret := string([]byte(secret))
-		fmt.Print("Key: ", key+"\t")
-		fmt.Print("Secret: ", secret+"\n")
 		secretMap[key] = secret
 	}
 
-	fmt.Print(fmt.Sprintf("Service sucessfully created, connect to your new instance at %s using the credentials Username: %s\t Password: %s", ip, secretMap["username"], secretMap["password"]))
+	fmt.Print(fmt.Sprintf("Service sucessfully created, your credentials are: \nUsername: %s \nPassword: %s", secretMap["username"], secretMap["password"]))
 
 	return spec, nil
 }

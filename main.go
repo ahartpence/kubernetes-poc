@@ -80,12 +80,6 @@ func createSecret(client *kubernetes.Clientset, fileName string, uid string) (*a
 	}
 	secret.Data["password"] = []byte(b64Password)
 
-	for key, secret := range secret.Data {
-		secret := string([]byte(secret))
-		fmt.Print("Key: ", key+"\t")
-		fmt.Print("Secret: ", secret+"\n")
-	}
-
 	return secretsInterface.Create(&secret)
 }
 
