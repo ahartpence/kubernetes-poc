@@ -6,12 +6,14 @@ import (
 
 	"github.com/pivotal-cf/brokerapi"
 	"github.com/pivotal-cf/brokerapi/domain"
+	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
 type Broker struct {
 	KubeClient  kubernetes.Clientset
 	Deployments map[string][]string
+	Secret      *apiv1.Secret
 }
 
 func (b *Broker) Services(context context.Context) ([]brokerapi.Service, error) {
@@ -42,46 +44,31 @@ func (b *Broker) Services(context context.Context) ([]brokerapi.Service, error) 
 }
 
 func (b *Broker) Provision(context context.Context, instanceID string, details brokerapi.ProvisionDetails, asyncAllowed bool) (brokerapi.ProvisionedServiceSpec, error) {
+
+	fmt.Print(fmt.Sprintf("Provisioning new instance: %s %s/%s \n", instanceID, details.ServiceID, details.PlanID))
 	spec := brokerapi.ProvisionedServiceSpec{}
 
-	fmt.Println("Provisioning new instance: ", details.ServiceID, instanceID)
-
 	deploymentName := details.ServiceID + "-" + instanceID
-	secret, err := createSecret(&b.KubeClient, "secret.yml", deploymentName)
-	if err != nil {
-		bailWith("Failed to create secret: %s", err)
-	}
+	b.Secret, _ = createSecret(&b.KubeClient, "secret.yml", deploymentName)
 
-	fmt.Println("\t Created Secret")
-	_, err = createDeployment(&b.KubeClient, "deployment.yml", deploymentName, details.ServiceID)
+	_, err := createDeployment(&b.KubeClient, "deployment.yml", deploymentName, details.ServiceID)
 	if err != nil {
 		bailWith("Failed to create deployment: %s", err)
 	}
-	fmt.Println("\t Created deployment")
+
 	_, err = createService(&b.KubeClient, "service.yml", deploymentName, details.ServiceID)
 	if err != nil {
 		bailWith("failed to create service: %s", err)
 	}
-	fmt.Println("\t Created service")
 
 	b.Deployments[details.ServiceID] = append(b.Deployments[details.ServiceID], instanceID)
-	b.GetServices(b.Deployments)
-	secretMap := make(map[string]string)
-	for key, secret := range secret.Data {
-		secret := string([]byte(secret))
-		secretMap[key] = secret
-	}
-
-	fmt.Print(fmt.Sprintf("Service sucessfully created, your credentials are: \nUsername: %s \nPassword: %s", secretMap["username"], secretMap["password"]))
 
 	return spec, nil
 }
 
 func (b *Broker) Deprovision(context context.Context, instanceID string, details brokerapi.DeprovisionDetails, asyncAllowed bool) (brokerapi.DeprovisionServiceSpec, error) {
-	fmt.Println("Deprovisioning Service :", details.ServiceID)
+	fmt.Print(fmt.Sprintf("Deleting  instance: %s %s/%s \n", instanceID, details.ServiceID, details.PlanID))
 	deploymentName := details.ServiceID + "-" + instanceID
-
-	fmt.Println(deploymentName)
 	err := deleteDeployment(&b.KubeClient, deploymentName)
 	if err != nil {
 		bailWith("Failed to delete deployment: %s", err)
@@ -96,13 +83,25 @@ func (b *Broker) Deprovision(context context.Context, instanceID string, details
 
 	b.Fuhgettaboutit(b.Deployments[details.ServiceID], instanceID)
 
-	b.GetServices(b.Deployments)
-
 	return brokerapi.DeprovisionServiceSpec{}, nil
 }
 
 func (b *Broker) Bind(context context.Context, instanceID, bindingID string, details brokerapi.BindDetails, asyncAllowed bool) (brokerapi.Binding, error) {
-	return brokerapi.Binding{}, nil
+	binding := brokerapi.Binding{}
+
+	secretMap := make(map[string]string)
+
+	for key, secret := range b.Secret.Data {
+		secret := string([]byte(secret))
+		secretMap[key] = secret
+	}
+
+	binding.Credentials = secretMap
+
+	//fmt.Print(fmt.Sprintf("Connect to your serivce using the following creds: \nUsername: %s \nPassword: %s", secretMap["username"], secretMap["password"]))
+
+	return binding, nil
+
 }
 
 func (b *Broker) Unbind(context context.Context, instanceID, bindingID string, details brokerapi.UnbindDetails, asyncAllowed bool) (domain.UnbindSpec, error) {
@@ -129,22 +128,14 @@ func (b *Broker) LastBindingOperation(ctx context.Context, instanceID, bindingID
 	return domain.LastOperation{}, nil
 }
 
-func (b *Broker) Fuhgettaboutit(s []string, strToRemove string) []string {
+func (b *Broker) Fuhgettaboutit(slice []string, strToRemove string) []string {
 	var i int
-	for p, w := range s {
-		if w == strToRemove {
-			i = p
+	for position, word := range slice {
+		if word == strToRemove {
+			i = position
 		}
 	}
-	s[i] = s[len(s)-1]
-	s[len(s)-1] = ""
-	return s[:len(s)-1]
-}
-
-func (b *Broker) GetServices(services map[string][]string) error {
-	for key, value := range services {
-		fmt.Println("Service:", key, "Instances", value)
-	}
-
-	return nil
+	slice[i] = slice[len(slice)-1]
+	slice[len(slice)-1] = ""
+	return slice[:len(slice)-1]
 }

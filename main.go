@@ -50,7 +50,6 @@ func main() {
 	if err != nil {
 		bailWith("Server quit: %s", err)
 	}
-	fmt.Println("Ready to create services")
 
 }
 func bailWith(format string, args ...interface{}) {
@@ -170,12 +169,6 @@ func deleteDeployment(client *kubernetes.Clientset, uid string) error {
 		PropagationPolicy: &deletePolicy,
 	}
 
-	listOptions := &metav1.ListOptions{
-		LabelSelector: uid,
-	}
-
-	fmt.Println(listOptions, uid)
-
 	return deploymentsInterface.Delete(uid, deleteOptions)
 }
 
@@ -187,12 +180,6 @@ func deleteService(client *kubernetes.Clientset, uid string) error {
 		PropagationPolicy: &deletePolicy,
 	}
 
-	listOptions := &metav1.ListOptions{
-		LabelSelector: uid,
-	}
-
-	fmt.Println(listOptions)
-
 	return serviceInterface.Delete(uid, deleteOptions)
 }
 
@@ -203,12 +190,6 @@ func deleteSecret(client *kubernetes.Clientset, uid string) error {
 	deleteOptions := &metav1.DeleteOptions{
 		PropagationPolicy: &deletePolicy,
 	}
-
-	listOptions := &metav1.ListOptions{
-		LabelSelector: uid,
-	}
-
-	fmt.Println(listOptions)
 
 	return secretsInterface.Delete(uid, deleteOptions)
 }
