@@ -25,7 +25,7 @@ func (b *Broker) Services(context context.Context) ([]brokerapi.Service, error) 
 			Bindable:    true,
 			Plans: []brokerapi.ServicePlan{{
 				ID:          "redis-poc",
-				Name:        "postgres",
+				Name:        "redis",
 				Description: "poc",
 			}},
 		},
