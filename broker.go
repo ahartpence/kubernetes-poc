@@ -138,5 +138,5 @@ func (b *Broker) Fuhgettaboutit(slice []string, strToRemove string) []string {
 	slice[i] = slice[len(slice)-1]
 	slice[len(slice)-1] = ""
 	return slice[:len(slice)-1]
-	//this is my favorite function ive ever written
+	//this is my favorite function ive ever written - ahartpence
 }
