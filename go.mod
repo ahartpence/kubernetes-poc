@@ -4,7 +4,6 @@ go 1.12
 
 require (
 	code.cloudfoundry.org/lager v2.0.0+incompatible
-	github.com/cloudfoundry-incubator/candiedyaml v0.0.0-20170901234223-a41693b7b7af // indirect
 	github.com/drewolson/testflight v1.0.0 // indirect
 	github.com/ghodss/yaml v0.0.0-20150909031657-73d445a93680
 	github.com/googleapis/gnostic v0.3.1 // indirect
@@ -14,15 +13,11 @@ require (
 	github.com/mattn/go-isatty v0.0.9 // indirect
 	github.com/pborman/uuid v1.2.0 // indirect
 	github.com/pivotal-cf/brokerapi v6.3.0+incompatible
-	github.com/pivotal-cf/cf-redis-broker v0.0.0-20190903083237-30fbb96f4383
-	github.com/pivotal-golang/lager v2.0.0+incompatible
 	github.com/pkg/errors v0.8.1 // indirect
 	github.com/sethvargo/go-password v0.1.2
-	golang.org/x/crypto v0.0.0-20190909091759-094676da4a83 // indirect
-	golang.org/x/net v0.0.0-20190909003024-a7b16738d86b // indirect
+	golang.org/x/crypto v0.1.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45 // indirect
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
-	gopkg.in/yaml.v2 v2.2.2
 	k8s.io/api v0.0.0-20190905160310-fb749d2f1064
 	k8s.io/apimachinery v0.0.0-20190831074630-461753078381
 	k8s.io/client-go v0.0.0-20190620085101-78d2af792bab
